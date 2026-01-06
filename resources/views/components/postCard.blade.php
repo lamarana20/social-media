@@ -4,12 +4,32 @@
     x-data="{
         liked: {{ auth()->user() && $post->jaimes->contains('user_id', auth()->id()) ? 'true' : 'false' }},
         likesCount: {{ $post->jaimes->count() }},
+        commentsCount: {{ $post->comments->count() }},
         loading: false,
         showCommentBox: false,
         commentText: '',
         submitting: false,
         
         async toggleLike() {
+            @guest
+                // Redirect to login if not authenticated
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Login Required',
+                    text: 'Please login to like posts',
+                    showCancelButton: true,
+                    confirmButtonText: 'Login',
+                    cancelButtonText: 'Cancel',
+                    confirmButtonColor: '#4F46E5',
+                    cancelButtonColor: '#6B7280'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        window.location.href = '{{ route('login') }}';
+                    }
+                });
+                return;
+            @endguest
+
             if (this.loading) return;
             this.loading = true;
             
@@ -29,17 +49,14 @@
                 this.likesCount = data.likes_count;
                 this.liked = data.liked;
                 
-                // Reload to update names
-                if (this.likesCount > 0) {
-                    setTimeout(() => window.location.reload(), 500);
-                }
             } catch (error) {
                 console.error('Error:', error);
                 Swal.fire({
                     icon: 'error',
                     title: 'Oops...',
                     text: 'Something went wrong!',
-                    timer: 2000
+                    timer: 2000,
+                    showConfirmButton: false
                 });
             } finally {
                 this.loading = false;
@@ -66,6 +83,9 @@
                 
                 if (!response.ok) throw new Error('Failed to post comment');
                 
+                // Update comment count
+                this.commentsCount++;
+                
                 Swal.fire({
                     icon: 'success',
                     title: 'Comment posted!',
@@ -76,16 +96,14 @@
                 this.commentText = '';
                 this.showCommentBox = false;
                 
-                // Reload page to show new comment
-                setTimeout(() => window.location.reload(), 1500);
-                
             } catch (error) {
                 console.error('Error:', error);
                 Swal.fire({
                     icon: 'error',
                     title: 'Oops...',
                     text: 'Failed to post comment!',
-                    timer: 2000
+                    timer: 2000,
+                    showConfirmButton: false
                 });
             } finally {
                 this.submitting = false;
@@ -134,50 +152,25 @@
         <!-- Divider -->
         <div class="border-t border-gray-200"></div>
         
-        <!-- Stats Bar (Facebook Style) -->
+        <!-- Stats Bar -->
         <div class="px-5 py-3 bg-gray-50">
             <div class="flex items-center justify-between text-sm">
-                <!-- Likes with Names -->
+                <!-- Likes Count -->
                 <div class="flex items-center gap-2">
-                    @if($post->jaimes->count() > 0)
-                        <div class="flex -space-x-2">
-                            <div class="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center border-2 border-white">
-                                <i class="fas fa-heart text-white text-[10px]"></i>
-                            </div>
+                    <span x-show="likesCount > 0" class="flex items-center gap-2">
+                        <div class="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center border-2 border-white">
+                            <i class="fas fa-heart text-white text-[10px]"></i>
                         </div>
-                        
-                        <span class="text-gray-600">
-                            @php
-                                $likers = $post->jaimes->take(3)->pluck('user.name')->filter();
-                                $totalLikes = $post->jaimes->count();
-                                $remaining = $totalLikes - $likers->count();
-                            @endphp
-                            
-                            @if($totalLikes === 1)
-                                <span class="hover:underline cursor-pointer">{{ $likers->first() }}</span>
-                            @elseif($totalLikes === 2)
-                                <span class="hover:underline cursor-pointer">{{ $likers->first() }}</span> and 
-                                <span class="hover:underline cursor-pointer">{{ $likers->last() }}</span>
-                            @elseif($totalLikes === 3)
-                                <span class="hover:underline cursor-pointer">{{ $likers[0] }}</span>, 
-                                <span class="hover:underline cursor-pointer">{{ $likers[1] }}</span> and 
-                                <span class="hover:underline cursor-pointer">{{ $likers[2] }}</span>
-                            @else
-                                <span class="hover:underline cursor-pointer">{{ $likers->first() }}</span>, 
-                                <span class="hover:underline cursor-pointer">{{ $likers->get(1) }}</span> and 
-                                <span class="font-medium">{{ $remaining }} {{ $remaining === 1 ? 'other' : 'others' }}</span>
-                            @endif
-                        </span>
-                    @endif
+                        <span class="text-gray-600" x-text="likesCount + (likesCount === 1 ? ' like' : ' likes')"></span>
+                    </span>
                 </div>
                 
                 <!-- Comments Count -->
-                @if($post->comments->count() > 0)
-                    <a href="{{ route('posts.show', $post) }}#comments" 
-                       class="text-gray-600 hover:underline">
-                        {{ $post->comments->count() }} {{ $post->comments->count() === 1 ? 'comment' : 'comments' }}
-                    </a>
-                @endif
+                <a x-show="commentsCount > 0" 
+                   href="{{ route('posts.show', $post) }}#comments" 
+                   class="text-gray-600 hover:underline">
+                    <span x-text="commentsCount + (commentsCount === 1 ? ' comment' : ' comments')"></span>
+                </a>
             </div>
         </div>
         
@@ -189,12 +182,12 @@
                     type="button" 
                     @click="toggleLike()"
                     :disabled="loading"
-                    class="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg hover:bg-gray-100 transition-all font-medium text-sm"
+                    class="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg hover:bg-gray-100 transition-all font-medium text-sm disabled:opacity-50"
                     :class="liked ? 'text-red-600' : 'text-gray-600'"
                 >
                     <i :class="liked ? 'fas fa-heart' : 'far fa-heart'" 
-                       class="transition-transform"
-                       :class="{ 'scale-110': liked }"
+                       class="transition-all"
+                       :class="{ 'scale-125': liked }"
                        x-show="!loading"></i>
                     <i class="fas fa-spinner fa-spin" 
                        x-show="loading" 
@@ -266,7 +259,7 @@
                                 class="px-4 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                             >
                                 <span x-show="!submitting">Post</span>
-                                <span x-show="submitting" class="flex items-center gap-2">
+                                <span x-show="submitting" class="flex items-center gap-2" x-cloak>
                                     <i class="fas fa-spinner fa-spin"></i>
                                     Posting...
                                 </span>
