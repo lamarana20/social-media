@@ -1,193 +1,258 @@
 <x-layout>
+    <!-- Flash Messages -->
     @if (session('success'))
         <x-flashMessage msg="{{ session('success') }}" />
-    @elseif(session('delete'))
-        <x-flashMessage msg="{{ session('delete') }}" bg="bg-red-500" />
-    @elseif(session('update'))
-        <x-flashMessage msg="{{ session('update') }} by {{ auth()->user()->name }}" bg="bg-green-500" />
     @endif
-    <div class="max-w-4xl mx-auto mt-8 p-8 bg-white shadow-2xl rounded-2xl">
-        {{-- Navigation Buttons --}}
-        <div class="flex justify-between mb-8">
+
+    @if(session('delete'))
+        <x-flashMessage msg="{{ session('delete') }}" bg="bg-red-500" />
+    @endif
+
+    @if(session('update'))
+        <x-flashMessage msg="{{ session('update') }}" bg="bg-blue-500" />
+    @endif
+
+    <div class="max-w-5xl mx-auto px-4 py-8">
+        <!-- Navigation -->
+        <div class="flex justify-between items-center mb-6">
             <a href="{{ route('posts.index') }}"
-                class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition duration-300 ease-in-out transform hover:-translate-x-1">
-                <span class="fa-solid fa-arrow-left mr-2"></span> Back
+                class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all">
+                <i class="fas fa-arrow-left"></i>
+                <span>Back to Posts</span>
             </a>
             <a href="{{ route('dashboard') }}"
-                class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition duration-300 ease-in-out transform hover:translate-x-1">
-                Dashboard <span class="fa-solid fa-arrow-right ml-2"></span>
+                class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all">
+                <i class="fas fa-tachometer-alt"></i>
+                <span>Dashboard</span>
             </a>
         </div>
 
-        {{-- Post Content --}}
-        <div class="bg-gray-50 p-8 rounded-xl shadow-lg relative">
-            {{-- Image --}}
-
-            <div class="h-32 w-32 rounded-lg overflow-hidden flex-shrink-0" id="thumbnailContainer">
-                @if ($post->image && Storage::disk('public')->exists($post->image))
-                    <!-- Si l'image existe dans le répertoire de stockage, on l'affiche -->
-                    <img src="{{ asset('storage/' . $post->image) }}" 
-                         alt="{{ $post->title }}" 
-                         class="w-full h-full object-cover cursor-pointer"
-                         onclick="openImageModal('{{ asset('storage/' . $post->image) }}')">
-                @else
-                    <!-- Si l'image n'existe pas, on affiche l'image par défaut -->
-                    <img src="{{ asset('storage/posts_images/default.png') }}" 
-                         alt="Default Image"
-                         class="w-full h-full object-cover opacity-70 cursor-pointer"
-                         onclick="openImageModal('{{ asset('storage/posts_images/default.png') }}')">
-                @endif
-            </div>
-            
-            {{-- Modal for full-size image --}}
-            <div id="imageModal" class="fixed inset-0 bg-black bg-opacity-90 hidden items-center justify-center z-50"
-                onclick="closeImageModal()">
-                <img id="modalImageContent" src="" alt="Full size image"
-                    class="max-w-[95%] max-h-[95vh] object-contain">
-            </div>
-            {{-- Title --}}
-            <h1 class="text-4xl font-bold text-gray-900 mb-4 leading-tight">{{ $post->title }}</h1>
-
-            {{-- Metadata --}}
-            <div class="flex items-center justify-between mb-6 text-sm text-gray-600">
-                <span class="flex items-center">
-                    <span class="fa-regular fa-calendar mr-2"></span>
-                    {{ $post->created_at->format('M d, Y') }}
-                </span>
-                <span class="flex items-center">
-                    <span class="fa-regular fa-user mr-2"></span>
-                    <a href="{{ route('posts.user', $post->user) }}"
-                        class="text-blue-600 font-medium hover:text-blue-800 transition">
-                        {{ $post->user->name ?? 'Unknown' }}
+        <!-- Main Post Card -->
+        <article class="bg-white rounded-2xl shadow-lg overflow-hidden mb-8">
+            <!-- Post Header -->
+            <div class="p-8 border-b border-gray-100">
+                <div class="flex items-center gap-4 mb-6">
+                    <a href="{{ route('posts.user', $post->user) }}">
+                        <img class="w-16 h-16 rounded-full border-2 border-indigo-200" 
+                             src="https://picsum.photos/seed/{{ $post->user->id }}/200"
+                             alt="{{ $post->user->name }}">
                     </a>
-                </span>
-            </div>
-
-            {{-- Post Body --}}
-            <div class="prose prose-lg max-w-none text-gray-800 leading-relaxed mb-8">
-                {!! nl2br(e($post->body)) !!}
-            </div>
-
-
-            {{-- Actions (Edit / Delete) : Only for author --}}
-            @auth
-                @if (auth()->user()->id == $post->user_id)
-                    <div class="mt-8 flex justify-end gap-4">
-                        <a href="{{ route('posts.edit', $post) }}"
-                            class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300 flex items-center">
-                            <span class="fa-regular fa-edit mr-2"></span> Edit
+                    <div class="flex-1">
+                        <a href="{{ route('posts.user', $post->user) }}" 
+                           class="text-lg font-bold text-gray-900 hover:text-indigo-600 transition">
+                            {{ $post->user->name ?? 'Unknown' }}
                         </a>
-
-                        <form action="{{ route('posts.destroy', $post) }}" method="POST"
-                            onsubmit="return confirm('Are you sure you want to delete this post?');">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit"
-                                class="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-300 flex items-center">
-                                <span class="fa-regular fa-trash-alt mr-2"></span> Delete
-                            </button>
-                        </form>
-                    </div>
-                @endif
-            @endauth
-        </div>
-
-        {{-- Comments Section --}}
-        <div class="mt-8 bg-white p-6 rounded-xl shadow-lg">
-            <h3 class="text-2xl font-bold mb-6">Comments</h3>
-
-            <div id="commentsContainer" class="max-h-[800px] overflow-hidden">
-                @foreach ($comments as $comment)
-                    <div
-                        class="flex items-start gap-4 p-4 bg-gray-50 rounded-lg mb-4 hover:bg-gray-100 transition-colors duration-200">
-                        {{-- Avatar --}}
-                        <div class="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 border-2 border-gray-200">
-                            <img class="w-10 h-10 rounded-full border-2 border-white shadow-sm"
-                                src="https://picsum.photos/seed/{{ $comment->user->id }}/200"
-                                alt="{{ $comment->user->name }}">
+                        <div class="flex items-center gap-3 text-sm text-gray-500 mt-1">
+                            <span class="flex items-center gap-1">
+                                <i class="far fa-calendar"></i>
+                                {{ $post->created_at->format('M d, Y') }}
+                            </span>
+                            <span>•</span>
+                            <span class="flex items-center gap-1">
+                                <i class="far fa-clock"></i>
+                                {{ $post->created_at->diffForHumans() }}
+                            </span>
                         </div>
+                    </div>
 
-                        {{-- Comment Content --}}
-                        <div class="flex-1">
-                            <div class="flex items-center gap-3 mb-2">
-                                <span
-                                    class="font-semibold text-gray-900">{{ $comment->user->name ?? 'Unknown User' }}</span>
-                                <span class="text-sm text-gray-500">{{ $comment->created_at->diffForHumans() }}</span>
-                            </div>
-                            <p class="text-gray-700 leading-relaxed">{{ $comment->content }}</p>
-                            {{-- Like Button --}}
-                            <div class="mt-3 flex items-center gap-4">
-                                <form action="{{ route('comments.like', $comment) }}" method="POST">
+                    <!-- Author Actions -->
+                    @auth
+                        @if (auth()->id() === $post->user_id)
+                            <div class="flex gap-2">
+                                <a href="{{ route('posts.edit', $post) }}"
+                                    class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <form action="{{ route('posts.destroy', $post) }}" method="POST"
+                                    onsubmit="return confirm('Delete this post?');">
                                     @csrf
-                                    <button type="submit" class="text-blue-600 hover:text-blue-800 flex items-center">
-                                        <span class="fa-regular fa-thumbs-up mr-1"></span>
-                                        {{ $comment->likes->count() }} <i>likes</i>
+                                    @method('DELETE')
+                                    <button type="submit"
+                                        class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition">
+                                        <i class="fas fa-trash-alt"></i>
                                     </button>
                                 </form>
-
-                                @auth
-                                    @if ($comment->likes->where('user_id', auth()->user()->id)->count())
-                                        <span class="text-blue-600">You liked this</span>
-                                    @endif
-                                @endauth
                             </div>
+                        @endif
+                    @endauth
+                </div>
 
-                            {{-- Edit / Delete --}}
-                            @auth
-                                @if (auth()->user()->id == $comment->user_id)
-                                    <div class="flex mt-3 gap-4">
-                                        <a href="{{ route('comments.edit', $comment) }}"
-                                            class="text-blue-600 hover:text-blue-800 flex items-center">
-                                            <span class="fa-regular fa-edit mr-1"></span> Edit
-                                        </a>
+                <!-- Post Title -->
+                <h1 class="text-4xl font-bold text-gray-900 mb-4">{{ $post->title }}</h1>
 
-                                        <form action="{{ route('comments.destroy', $comment) }}" method="POST"
-                                            onsubmit="return confirm('Are you sure you want to delete this comment?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="text-red-600 hover:text-red-800 flex items-center">
-                                                <span class="fa-regular fa-trash-alt mr-1"></span> Delete
-                                            </button>
-                                        </form>
+                <!-- Post Image -->
+                @if ($post->image && Storage::disk('public')->exists($post->image))
+                    <div class="mt-6 rounded-xl overflow-hidden cursor-pointer group"
+                         onclick="openImageModal('{{ asset('storage/' . $post->image) }}')">
+                        <img src="{{ asset('storage/' . $post->image) }}" 
+                             alt="{{ $post->title }}"
+                             class="w-full h-auto object-cover group-hover:scale-105 transition-transform duration-300">
+                    </div>
+                @endif
+            </div>
+
+            <!-- Post Content -->
+            <div class="p-8">
+                <div class="prose prose-lg max-w-none text-gray-700 leading-relaxed">
+                    {!! nl2br(e($post->body)) !!}
+                </div>
+            </div>
+
+            <!-- Post Stats & Actions -->
+            <div class="border-t border-gray-100">
+                <div class="px-8 py-4 bg-gray-50 flex items-center justify-between">
+                    <div class="flex items-center gap-6 text-sm text-gray-600">
+                        <span class="flex items-center gap-2">
+                            <i class="fas fa-heart text-red-500"></i>
+                            <span class="font-medium">{{ $post->jaimes->count() }} likes</span>
+                        </span>
+                        <span class="flex items-center gap-2">
+                            <i class="fas fa-comment text-blue-500"></i>
+                            <span class="font-medium">{{ $comments->count() }} comments</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </article>
+
+        <!-- Comments Section -->
+        <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+            <div class="p-6 border-b border-gray-100">
+                <h2 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                    <i class="fas fa-comments text-indigo-600"></i>
+                    Comments ({{ $comments->count() }})
+                </h2>
+            </div>
+
+            <!-- Add Comment (Top) -->
+            @auth
+                <div class="p-6 bg-gray-50 border-b border-gray-100">
+                    <form action="{{ route('comments.store', $post) }}" method="POST">
+                        @csrf
+                        <div class="flex gap-3">
+                            <img class="w-10 h-10 rounded-full border border-gray-300" 
+                                 src="https://picsum.photos/seed/{{ auth()->id() }}/200"
+                                 alt="{{ auth()->user()->name }}">
+                            
+                            <div class="flex-1">
+                                <textarea name="content" rows="3"
+                                    class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition resize-none"
+                                    placeholder="Write a comment..." required>{{ old('content') }}</textarea>
+                                
+                                @error('content')
+                                    <p class="error">{{ $message }}</p>
+                                @enderror
+                                
+                                <div class="flex justify-end mt-2">
+                                    <button type="submit"
+                                        class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2">
+                                        <i class="far fa-paper-plane"></i>
+                                        Post Comment
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            @else
+                <div class="p-6 bg-gray-50 border-b border-gray-100 text-center">
+                    <p class="text-gray-600 mb-3">Please login to comment</p>
+                    <a href="{{ route('login') }}" 
+                       class="inline-flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+                        <i class="fas fa-sign-in-alt"></i>
+                        Login
+                    </a>
+                </div>
+            @endauth
+
+            <!-- Comments List -->
+            <div class="divide-y divide-gray-100">
+                @forelse ($comments as $comment)
+                    <div class="p-6 hover:bg-gray-50 transition-colors">
+                        <div class="flex gap-4">
+                            <!-- Avatar -->
+                            <img class="w-12 h-12 rounded-full border-2 border-gray-200" 
+                                 src="https://picsum.photos/seed/{{ $comment->user->id }}/200"
+                                 alt="{{ $comment->user->name }}">
+                            
+                            <!-- Comment Content -->
+                            <div class="flex-1">
+                                <!-- Header -->
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center gap-3">
+                                        <span class="font-semibold text-gray-900">
+                                            {{ $comment->user->name ?? 'Unknown User' }}
+                                        </span>
+                                        <span class="text-sm text-gray-500">
+                                            {{ $comment->created_at->diffForHumans() }}
+                                        </span>
                                     </div>
-                                @endif
-                            @endauth
+
+                                    <!-- Edit/Delete (Author only) -->
+                                    @auth
+                                        @if (auth()->id() === $comment->user_id)
+                                            <div class="flex gap-2">
+                                                <a href="{{ route('comments.edit', $comment) }}"
+                                                    class="text-blue-600 hover:text-blue-800 text-sm">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                <form action="{{ route('comments.destroy', $comment) }}" method="POST"
+                                                    onsubmit="return confirm('Delete comment?');" class="inline">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="text-red-600 hover:text-red-800 text-sm">
+                                                        <i class="fas fa-trash-alt"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        @endif
+                                    @endauth
+                                </div>
+
+                                <!-- Comment Text -->
+                                <p class="text-gray-700 leading-relaxed mb-3">{{ $comment->content }}</p>
+
+                                <!-- Like Button -->
+                                <form action="{{ route('comments.like', $comment) }}" method="POST" class="inline">
+                                    @csrf
+                                    <button type="submit" 
+                                        class="inline-flex items-center gap-2 text-sm transition-colors
+                                        {{ auth()->check() && $comment->likes->where('user_id', auth()->id())->count() 
+                                            ? 'text-blue-600 font-medium' 
+                                            : 'text-gray-600 hover:text-blue-600' }}">
+                                        <i class="{{ auth()->check() && $comment->likes->where('user_id', auth()->id())->count() 
+                                            ? 'fas' 
+                                            : 'far' }} fa-thumbs-up"></i>
+                                        <span>{{ $comment->likes->count() }}</span>
+                                        @if(auth()->check() && $comment->likes->where('user_id', auth()->id())->count())
+                                            <span class="text-xs">• You liked this</span>
+                                        @endif
+                                    </button>
+                                </form>
+                            </div>
                         </div>
                     </div>
-                @endforeach
-            </div>
-
-            @if (count($comments) > 10)
-                <button id="readMoreBtn"
-                    class="mt-4 w-full py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors duration-300">
-                    Read More Comments
-                </button>
-            @endif
-        </div>
-
-        {{-- Add a comment --}}
-        @auth
-            <div class="mt-8 bg-white p-6 rounded-xl shadow-lg">
-                <h3 class="text-2xl font-bold mb-4">Add a Comment</h3>
-                <form action="{{ route('comments.store', $post) }}" method="POST">
-                    @csrf
-                    <div class="mb-4">
-                        <textarea name="content" rows="4"
-                            class="w-full border border-gray-300 rounded-lg p-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                            placeholder="Share your thoughts..." required></textarea>
+                @empty
+                    <div class="p-12 text-center">
+                        <i class="fas fa-comment-slash text-6xl text-gray-300 mb-4"></i>
+                        <p class="text-gray-500 text-lg">No comments yet</p>
+                        <p class="text-gray-400 text-sm">Be the first to comment!</p>
                     </div>
-
-                    @error('content')
-                        <div class="text-red-500 text-sm mb-4">{{ $message }}</div>
-                    @enderror
-
-                    <button type="submit"
-                        class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300 flex items-center">
-                        <span class="fa-regular fa-paper-plane mr-2"></span> Post Comment
-                    </button>
-                </form>
+                @endforelse
             </div>
-        @endauth
+        </div>
+    </div>
+
+    <!-- Image Modal -->
+    <div id="imageModal" 
+         class="fixed inset-0 bg-black bg-opacity-95 hidden items-center justify-center z-50"
+         onclick="closeImageModal()">
+        <button onclick="closeImageModal()" 
+                class="absolute top-4 right-4 text-white text-4xl hover:text-gray-300 transition">
+            &times;
+        </button>
+        <img id="modalImageContent" src="" alt="Full size image"
+             class="max-w-[95%] max-h-[95vh] object-contain rounded-lg shadow-2xl">
     </div>
 
     <script>
@@ -207,21 +272,8 @@
             document.body.style.overflow = 'auto';
         }
 
-        // Close modal with Escape key
         document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                closeImageModal();
-            }
+            if (e.key === 'Escape') closeImageModal();
         });
-
-        // Read More Comments functionality
-        const readMoreBtn = document.getElementById('readMoreBtn');
-        if (readMoreBtn) {
-            readMoreBtn.addEventListener('click', function() {
-                const commentsContainer = document.getElementById('commentsContainer');
-                commentsContainer.style.maxHeight = 'none';
-                this.style.display = 'none';
-            });
-        }
     </script>
 </x-layout>

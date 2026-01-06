@@ -10,7 +10,11 @@ use App\Http\Controllers\CommentController;
 
 
 Route::get('/', [PostController::class, 'index']);
-
+Route::get('/test', function () {
+    return 'Test route';
+});
+Route::get('/trending', [PostController::class, 'trending'])->name('posts.trending');
+Route::get('/search', [PostController::class, 'search'])->name('posts.search');
 
 Route::middleware(['guest'])->group(function () {
     //Register
@@ -58,4 +62,3 @@ Route::post('/posts/{post}/jaimer', [PostController::class, 'jaimerPost'])->name
 
 Route::resource('posts', PostController::class);
 Route::get('/{user}/posts', [DashboardController::class, 'userPosts'])->name('posts.user');
-
